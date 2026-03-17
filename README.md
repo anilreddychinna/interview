@@ -103,6 +103,93 @@ this.data$.subscribe({
 
 ---
 
+### What is a Subscription? How do you use it in Angular?
+
+**Answer:** A **Subscription** is the object you get back when you call `observable.subscribe(...)`. It represents the **active execution** of that Observable and allows you to **unsubscribe** (stop listening and release resources).
+
+**When you must unsubscribe:** Usually for **long-lived streams** like:
+
+- `interval(...)`, `fromEvent(...)`
+- `form.valueChanges`
+- custom `Subject`/`BehaviorSubject` streams
+
+**When you often don’t need to unsubscribe:** For **HttpClient** requests, because they usually emit once and complete automatically.
+
+---
+
+### Q. What happens if you don’t unsubscribe?
+
+**Answer:** The subscription can keep running after the component is destroyed, causing:
+
+- **Memory leaks**
+- **Duplicate API calls / duplicate events**
+- **Unexpected UI updates**
+
+---
+
+### Subscription usage patterns (interview-ready)
+
+#### 1) Manual `unsubscribe()` in `ngOnDestroy`
+
+```typescript
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription, interval } from 'rxjs';
+
+@Component({ selector: 'app-timer', template: '{{ seconds }}' })
+export class TimerComponent implements OnInit, OnDestroy {
+  private sub?: Subscription;
+  seconds = 0;
+
+  ngOnInit(): void {
+    this.sub = interval(1000).subscribe(v => (this.seconds = v));
+  }
+
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
+  }
+}
+```
+
+**Why this works:** You stop the stream when the component is removed.
+
+---
+
+#### 2) Prefer `async` pipe when possible (no manual unsubscribe)
+
+```typescript
+seconds$ = interval(1000);
+```
+
+```html
+<p>{{ seconds$ | async }}</p>
+```
+
+**Why this is preferred:** The `async` pipe subscribes/unsubscribes automatically based on component lifecycle.
+
+---
+
+#### 3) Modern Angular (v16+) `takeUntilDestroyed()` (recommended)
+
+```typescript
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+@Component({ selector: 'app-profile', template: '...' })
+export class ProfileComponent {
+  private readonly destroyRef = inject(DestroyRef);
+
+  ngOnInit(): void {
+    this.form.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(value => console.log(value));
+  }
+}
+```
+
+**Why this is preferred:** No manual `Subscription` variable; teardown is automatic and consistent.
+
+---
+
 ### Observable vs Promise – when to use which?
 
 **Answer:**
