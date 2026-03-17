@@ -538,3 +538,211 @@ public class QuickSort {
 
 ---
 
+## Same programs using Java 8 features (Streams, lambdas – no plain loops)
+
+Below are **Java 8 style** versions of several programs above: use **Streams**, **lambdas**, **method references**, and **Collectors** instead of plain array/collection iteration.
+
+---
+
+### 19. Reverse a String (Java 8)
+
+```java
+import java.util.stream.Collectors;
+
+public class ReverseStringJava8 {
+  public static void main(String[] args) {
+    String input = "hello";
+    String reversed = input.chars()
+        .mapToObj(c -> (char) c)
+        .reduce("", (s, c) -> c + s, (a, b) -> b + a);
+    System.out.println(reversed);  // olleh
+  }
+}
+```
+
+**Alternative (using StringBuilder with collect):**
+
+```java
+String reversed = input.chars()
+    .collect(StringBuilder::new, (sb, c) -> sb.insert(0, (char) c), StringBuilder::append)
+    .toString();
+```
+
+---
+
+### 20. Check Palindrome (Java 8 – IntStream)
+
+```java
+import java.util.stream.IntStream;
+
+public class PalindromeJava8 {
+  public static boolean isPalindrome(String s) {
+    return IntStream.range(0, s.length() / 2)
+        .allMatch(i -> s.charAt(i) == s.charAt(s.length() - 1 - i));
+  }
+
+  public static void main(String[] args) {
+    System.out.println(isPalindrome("madam"));   // true
+    System.out.println(isPalindrome("hello"));   // false
+  }
+}
+```
+
+---
+
+### 21. Find Duplicates in a List (Java 8 – Stream + groupingBy)
+
+```java
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class FindDuplicatesJava8 {
+  public static void main(String[] args) {
+    List<Integer> list = Arrays.asList(1, 2, 3, 2, 4, 5, 1);
+
+    Set<Integer> duplicates = list.stream()
+        .filter(n -> Collections.frequency(list, n) > 1)
+        .collect(Collectors.toSet());
+
+    System.out.println("Duplicates: " + duplicates);  // [1, 2]
+  }
+}
+```
+
+**Efficient one-pass style (still Java 8, using Set):**
+
+```java
+Set<Integer> seen = new HashSet<>();
+Set<Integer> duplicates = list.stream()
+    .filter(n -> !seen.add(n))
+    .collect(Collectors.toSet());
+```
+
+---
+
+### 22. Character frequency (Java 8 – Stream of chars)
+
+```java
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class CharFrequencyJava8 {
+  public static void main(String[] args) {
+    String s = "hello world";
+
+    Map<Character, Long> freq = s.chars()
+        .filter(c -> c != ' ')
+        .mapToObj(c -> (char) c)
+        .collect(Collectors.groupingBy(c -> c, Collectors.counting()));
+
+    System.out.println(freq);  // {r=1, d=1, e=1, w=1, h=1, l=3, o=2}
+  }
+}
+```
+
+---
+
+### 23. Remove duplicates, preserve order (Java 8 – distinct)
+
+```java
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class RemoveDuplicatesJava8 {
+  public static void main(String[] args) {
+    List<Integer> list = Arrays.asList(1, 2, 3, 2, 4, 5, 1);
+
+    List<Integer> distinct = list.stream()
+        .distinct()
+        .collect(Collectors.toList());
+
+    System.out.println(distinct);  // [1, 2, 3, 4, 5]
+  }
+}
+```
+
+**Note:** For insertion order with streams, use ordered stream (e.g. from list); `distinct()` preserves encounter order.
+
+---
+
+### 24. Reverse words in a String (Java 8 – Stream)
+
+```java
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.stream.Collectors;
+
+public class ReverseWordsJava8 {
+  public static void main(String[] args) {
+    String input = "  hello   world from java  ";
+    String reversed = Arrays.stream(input.trim().split("\\s+"))
+        .collect(Collectors.collectingAndThen(
+            Collectors.toList(),
+            list -> {
+              Collections.reverse(list);
+              return String.join(" ", list);
+            }));
+    System.out.println(reversed);  // java from world hello
+  }
+}
+```
+
+---
+
+### 25. Sort an array (Java 8 – Arrays.stream + sorted)
+
+```java
+import java.util.Arrays;
+
+public class SortArrayJava8 {
+  public static void main(String[] args) {
+    int[] arr = {5, 1, 4, 2, 8};
+
+    int[] sorted = Arrays.stream(arr)
+        .sorted()
+        .toArray();
+
+    Arrays.stream(sorted).forEach(n -> System.out.print(n + " "));  // 1 2 4 5 8
+  }
+}
+```
+
+---
+
+### 26. Sum, max, filter (Java 8 – one place)
+
+```java
+import java.util.Arrays;
+import java.util.OptionalInt;
+
+public class SumMaxFilterJava8 {
+  public static void main(String[] args) {
+    int[] arr = {3, 1, 4, 1, 5, 9, 2, 6};
+
+    int sum = Arrays.stream(arr).sum();
+    OptionalInt maxOpt = Arrays.stream(arr).max();
+    int[] evens = Arrays.stream(arr).filter(n -> n % 2 == 0).toArray();
+
+    System.out.println("Sum: " + sum);
+    System.out.println("Max: " + maxOpt.orElse(0));
+    System.out.println("Evens: " + Arrays.toString(evens));
+  }
+}
+```
+
+---
+
+### Quick reference – Java 8 used here
+
+| Goal              | Java 8 approach                                      |
+|-------------------|--------------------------------------------------------|
+| Reverse string    | `chars()` + `reduce` or `StringBuilder::insert`       |
+| Palindrome        | `IntStream.range().allMatch()`                        |
+| Duplicates        | `stream().filter(frequency > 1)` or `filter(!seen.add)` |
+| Char frequency    | `chars().mapToObj().groupingBy(..., counting())`       |
+| Distinct          | `stream().distinct().collect(toList())`               |
+| Reverse words     | `Arrays.stream(split).collect(collectingAndThen(toList(), reverse + join))` |
+| Sort array        | `Arrays.stream(arr).sorted().toArray()`               |
+| Sum / max / filter| `Arrays.stream().sum()`, `.max()`, `.filter().toArray()` |
+
